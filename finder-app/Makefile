@@ -1,10 +1,9 @@
-CC=gcc
-CROSS_COMPILE=aarch64-none-linux-gnu-
+CC ?= gcc
 CFLAGS=-Wall -Werror
 
-# Detect if cross-compiling
+# Allow optional cross-compilation
 ifeq ($(CROSS_COMPILE),)
-    CC=$(CC)
+    CC=gcc
 else
     CC=$(CROSS_COMPILE)gcc
 endif
