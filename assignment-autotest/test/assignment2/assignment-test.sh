@@ -1,27 +1,52 @@
 #!/bin/bash
-set -e
+pushd $(dirname $0)
+source script-helpers
 
-# Navigate to the root directory of the repository
-cd "$(dirname "$0")/../../.."
+SCRIPTS_DIR=$(pwd)
+SOURCE_DIR=$(realpath ${SCRIPTS_DIR}/../../../)
 
-echo "Executing assignment test script from: $(pwd)"
+pushd ${SOURCE_DIR}/finder-app
 
-# Ensure finder-app exists
-if [ ! -d "finder-app" ]; then
-    echo "Error: finder-app directory not found!"
+make clean
+if [ -x "./writer" ]; then
+    echo "ERROR: make clean does not clean up the writer executable in ${SOURCE_DIR}/finder-app"
     exit 1
 fi
 
-# Clean and rebuild the writer application
-make clean -C ./finder-app
-make -C ./finder-app
+make
+if [ -x "./writer" ]; then
+    ./writer
+    rc=$?
+    if [ $rc -ne 1 ]; then
+        add_validate_error "writer should have exited with return value 1 if no parameters were specified"
+    fi
 
-# Ensure the writer binary exists
-if [ ! -f "finder-app/writer" ]; then
-    echo "Error: writer binary not found!"
+    ./writer "$filedir"
+    rc=$?
+    if [ $rc -ne 1 ]; then
+        add_validate_error "writer should have exited with return value 1 if write string is not specified"
+    fi
+    echo "Performing make clean"
+    make clean
+else
+    echo "Makefile Error, Failed to generate writer executable in ${SOURCE_DIR}/finder-app."
     exit 1
 fi
 
-# Run the finder-test script
-./finder-app/finder-test.sh
+./finder-test.sh
+rc=$?
+# Check if writer executable exists after finder-test.sh
+if [ ! -x "./writer" ]; then
+    echo "ERROR: ./writer executable does not exist after executing finder-test.sh in ${SOURCE_DIR}/finder-app. Make sure finder-test.sh includes the necessary make step."
+    exit 1
+fi
+
+if [ $rc -ne 0 ]; then
+    add_validate_error "finder-test.sh execution failed with return code $rc"
+fi
+
+if [ ! -z "${validate_error}" ]; then
+    echo "Validation failed with error list ${validate_error}"
+    exit 1
+fi
 
