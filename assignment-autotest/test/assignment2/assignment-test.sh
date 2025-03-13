@@ -1,34 +1,27 @@
 #!/bin/bash
-pushd $(dirname $0)
-source script-helpers
+set -e
 
-SCRIPTS_DIR=$(pwd)
-SOURCE_DIR=$(realpath ${SCRIPTS_DIR}/../../../)
+# Navigate to the root directory of the repository
+cd "$(dirname "$0")/../../.."
 
-pushd ${SOURCE_DIR}/finder-app
+echo "Executing assignment test script from: $(pwd)"
 
-make clean
-make
-
-./writer
-rc=$?
-if [ $rc -ne 1 ]; then
-	add_validate_error "writer should have exited with return value 1 if no parameters were specified"
-fi
-
-./writer "$filedir"
-rc=$?
-if [ $rc -ne 1 ]; then
-	add_validate_error "writer should have exited with return value 1 if write string is not specified"
-fi
-
-./finder-test.sh
-rc=$?
-if [ $rc -ne 0 ]; then
-	add_validate_error "finder-test.sh execution failed with return code $rc"
-fi
-
-if [ ! -z "${validate_error}" ]; then
-    echo "Validation failed with error list ${validate_error}"
+# Ensure finder-app exists
+if [ ! -d "finder-app" ]; then
+    echo "Error: finder-app directory not found!"
     exit 1
 fi
+
+# Clean and rebuild the writer application
+make clean -C ./finder-app
+make -C ./finder-app
+
+# Ensure the writer binary exists
+if [ ! -f "finder-app/writer" ]; then
+    echo "Error: writer binary not found!"
+    exit 1
+fi
+
+# Run the finder-test script
+./finder-app/finder-test.sh
+

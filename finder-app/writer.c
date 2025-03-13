@@ -25,8 +25,9 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    // Write string to file
-    if (fprintf(file, "%s", text_string) < 0) {
+    // Write string to file with a newline
+	if (fprintf(file, "%s\n", text_string) < 0) {
+
         syslog(LOG_ERR, "Failed to write to file: %s", file_path);
         perror("Error writing to file");
         fclose(file);
