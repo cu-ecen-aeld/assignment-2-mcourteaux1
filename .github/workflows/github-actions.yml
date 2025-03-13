@@ -18,14 +18,14 @@ jobs:
           - name: Checkout submodules
             run: git submodule update --init --recursive
 
-          - name: Set execute permissions for unit-test.sh
-            run: chmod +x ./unit-test.sh
+          - name: Fix permissions for unit-test.sh
+            run: chmod +x unit-test.sh
 
-          - name: Debug unit-test.sh permissions
-            run: ls -l ./unit-test.sh
+          - name: Verify unit-test.sh permissions
+            run: ls -l unit-test.sh
 
           - name: Run unit test
-            run: ./unit-test.sh
+            run: bash unit-test.sh
 
     full-test:
         container: cuaesd/aesd-autotest:24-assignment2
@@ -37,12 +37,12 @@ jobs:
           - name: Checkout submodules
             run: git submodule update --init --recursive
 
-          - name: Set execute permissions for full-test.sh
-            run: chmod +x ./full-test.sh
+          - name: Fix permissions for full-test.sh
+            run: chmod +x full-test.sh
 
-          - name: Debug full-test.sh permissions
-            run: ls -l ./full-test.sh
+          - name: Verify full-test.sh permissions
+            run: ls -l full-test.sh
 
           - name: Run full test
-            run: ./full-test.sh
+            run: bash full-test.sh
 
