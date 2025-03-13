@@ -1,34 +1,52 @@
-#!/bin/sh
-# Test the example implementation, running against either a directory
-# specified as argument, or a temp directory created
+#!/bin/bash
+# This script can be copied into your base directory for use with
+# automated testing using assignment-autotest.  It automates the
+# steps described in https://github.com/cu-ecen-5013/assignment-autotest/blob/master/README.md#running-tests
 set -e
-if [ $# -eq 1 ]; then
-    work_dir=$1
-    work_dir=$(realpath ${work_dir})
-else
-    work_dir=`mktemp -d`
-fi
+
 cd `dirname $0`
-mkdir -p ${work_dir}
-autotest_sourcedir=`pwd`
-# Copy the contents of the repository into work_dir to
-# simulate a proejct which adds this project as a submodule
-cd ${work_dir}
-if [ ! -f ${work_dir}/.git ]; then
-    git init
+test_dir=`pwd`
+echo "starting test with SKIP_BUILD=\"${SKIP_BUILD}\" and DO_VALIDATE=\"${DO_VALIDATE}\""
+
+# This part of the script always runs as the current user, even when
+# executed inside a docker container.
+# See the logic in parse_docker_options for implementation
+logfile=test.sh.log
+# See https://stackoverflow.com/a/3403786
+# Place stdout and stderr in a log file
+exec > >(tee -i -a "$logfile") 2> >(tee -i -a "$logfile" >&2)
+
+echo "Running test with user $(whoami)"
+
+set +e
+
+./unit-test.sh
+unit_test_rc=$?
+if [ $unit_test_rc -ne 0 ]; then
+    echo "Unit test failed"
 fi
-git submodule add -f ${autotest_sourcedir} assignment-autotest
-git submodule update --init --recursive
-# Copy the examples and parent-example cmake list files to
-# the parent work_dir directory.  Rename CMakeLists.txt so
-# we will use this as our CMakeLists.txt file
-# Copy the travis file to the base directory so it will support
-# Travis CI and rename it test.sh
-cp -r assignment-autotest/examples .
-cp assignment-autotest/CMakeLists-parent-example.txt ./CMakeLists.txt
-cp assignment-autotest/test-basedir.sh full-test.sh
-cp assignment-autotest/test-unit.sh .
-# Run the test script (test-basedir.sh renamed) in the base directory,
-# Same as it will be run from Travis-CI
-./full-test.sh
-echo "Test success, working example in ${work_dir}"
+
+# If there's a configuration for the assignment number, use this to look for
+# additional tests
+if [ -f conf/assignment.txt ]; then
+    # This is just one example of how you could find an associated assignment
+    assignment=`cat conf/assignment.txt`
+    if [ -f ./assignment-autotest/test/${assignment}/assignment-test.sh ]; then
+        echo "Executing assignment test script"
+        ./assignment-autotest/test/${assignment}/assignment-test.sh $test_dir
+        rc=$?
+        if [ $rc -eq 0 ]; then
+            echo "Test of assignment ${assignment} complete with success"
+        else
+            echo "Test of assignment ${assignment} failed with rc=${rc}"
+            exit $rc
+        fi
+    else
+        echo "No assignment-test script found for ${assignment}"
+        exit 1
+    fi
+else
+    echo "Missing conf/assignment.txt, no assignment to run"
+    exit 1
+fi
+exit ${unit_test_rc}
